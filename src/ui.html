@@ -1,0 +1,550 @@
+<title>Mint Condition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Figtree:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: a collector's desk. Sticky wallet bar on top, layer tabs like binder dividers, the active layer below. */
+:root {
+  --bg: #E6EAF1; --surface: #F8FAFD; --sunk: #DCE2EC; --ink: #182033; --muted: #59647D; --line: #C9D1DF;
+  --accent: #2A4BD4; --accent-ink: #FFFFFF; --gold: #D9A106; --good: #1E8C5A; --bad: #C2413A;
+  --rC: #7D889E; --rU: #23955F; --rR: #2F66DA; --rF: #D9A106;
+  --display: 'Bungee', 'Arial Black', Impact, sans-serif;
+  --body: 'Figtree', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0E1220; --surface: #171D2D; --sunk: #0A0E19; --ink: #E5E9F4; --muted: #97A1B8; --line: #2A3349;
+  --accent: #7B93FF; --accent-ink: #0E1220; --gold: #F0C03A; --good: #4CC58A; --bad: #F07A70;
+  --rC: #8A95AC; --rU: #45C285; --rR: #6F98FF; --rF: #F0C03A; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0E1220; --surface: #171D2D; --sunk: #0A0E19; --ink: #E5E9F4; --muted: #97A1B8; --line: #2A3349;
+  --accent: #7B93FF; --accent-ink: #0E1220; --gold: #F0C03A; --good: #4CC58A; --bad: #F07A70;
+  --rC: #8A95AC; --rU: #45C285; --rR: #6F98FF; --rF: #F0C03A; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--body); padding: 0 16px 48px; }
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 16px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Wallet bar */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 14px 10px; display: grid; gap: 10px; border-bottom: 1px solid var(--line); }
+.bar-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.logo { font-family: var(--display); font-size: 20px; letter-spacing: .02em; line-height: 1; margin: 0; }
+.logo small { display: block; font-family: var(--body); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+.wallet { text-align: right; }
+.coins { font-family: var(--display); font-size: clamp(24px, 6vw, 34px); line-height: 1; }
+.coins i { font-style: normal; color: var(--gold); }
+.rate { color: var(--muted); font-size: 13px; font-weight: 600; }
+.goal { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 13px; }
+.goal b { font-weight: 700; }
+.goal .eta { color: var(--muted); text-align: right; }
+.meter { flex: 1 0 100%; height: 8px; background: var(--sunk); border-radius: 99px; overflow: hidden; }
+.meter > span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width .25s; }
+
+/* Layer tabs (binder dividers) */
+.tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.tab { flex: 0 0 auto; border: 1px solid var(--line); background: var(--surface); border-radius: 8px 8px 2px 2px; padding: 7px 12px; font-weight: 700; font-size: 13px; display: flex; gap: 6px; align-items: baseline; }
+.tab .n { font-family: var(--display); font-size: 11px; color: var(--muted); }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tab[aria-selected="true"] .n { color: var(--bg); opacity: .7; }
+.tab.locked { color: var(--muted); border-style: dashed; background: transparent; }
+.tab.fresh { box-shadow: 0 0 0 3px var(--gold); }
+
+/* Panels */
+.layer { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 760px) { .layer { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.panel h2 { font-family: var(--display); font-size: 15px; font-weight: 400; margin: 0; letter-spacing: .02em; }
+.panel h3 { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.hint { color: var(--muted); font-size: 13px; margin: 0; max-width: 60ch; }
+
+/* Pack */
+.packrow { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.pack { position: relative; width: 104px; aspect-ratio: 5 / 7; max-width: 100%; border: 0; border-radius: 8px; padding: 0; flex: 0 0 auto;
+  background: linear-gradient(160deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--ink)));
+  color: var(--accent-ink); display: grid; place-items: center; text-align: center; box-shadow: 0 6px 0 color-mix(in srgb, var(--accent) 50%, var(--ink)); transition: transform .08s, box-shadow .08s; }
+.pack::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 12px; border-radius: 8px 8px 0 0; background: repeating-linear-gradient(90deg, transparent 0 6px, color-mix(in srgb, var(--accent-ink) 25%, transparent) 6px 8px); }
+.pack span { font-family: var(--display); font-size: 15px; line-height: 1.05; }
+.pack small { display: block; font-family: var(--body); font-weight: 700; font-size: 11px; margin-top: 6px; opacity: .85; }
+.pack:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 50%, var(--ink)); }
+.pack:disabled { filter: grayscale(.7); opacity: .55; cursor: not-allowed; }
+.packinfo { display: grid; gap: 8px; flex: 1 1 200px; min-width: 0; }
+.packinfo .price { font-size: 13px; color: var(--muted); }
+.packinfo .price b { color: var(--ink); }
+.toggle { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; }
+.switch { width: 42px; height: 24px; border-radius: 99px; border: 0; background: var(--sunk); position: relative; padding: 0; flex: 0 0 auto; }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--muted); transition: left .15s, background .15s; }
+.switch[aria-checked="true"] { background: color-mix(in srgb, var(--good) 35%, var(--sunk)); }
+.switch[aria-checked="true"]::after { left: 21px; background: var(--good); }
+.mini-meter { height: 4px; background: var(--sunk); border-radius: 99px; overflow: hidden; }
+.mini-meter > span { display: block; height: 100%; width: 0; background: var(--good); }
+
+/* Cards */
+.pulls { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; min-height: 140px; }
+.card { position: relative; border-radius: 7px; padding: 5px; background: var(--surface); border: 2px solid var(--rc); display: grid; gap: 3px; text-align: left; min-width: 0; --rc: var(--rC); }
+.card.U { --rc: var(--rU); } .card.R { --rc: var(--rR); } .card.F { --rc: var(--rF); }
+.card.F { background: linear-gradient(135deg, var(--surface) 0%, color-mix(in srgb, var(--rF) 22%, var(--surface)) 45%, var(--surface) 55%, color-mix(in srgb, var(--rF) 30%, var(--surface)) 100%); }
+.card .art { border-radius: 4px; aspect-ratio: 5 / 4; max-width: 100%; display: block; overflow: hidden; }
+.card .art svg { width: 100%; height: 100%; display: block; }
+.card .nm { font-weight: 700; font-size: 11.5px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .rr { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--rc); display: flex; justify-content: space-between; gap: 4px; }
+.card .rr em { font-style: normal; color: var(--muted); }
+.badge { position: absolute; top: -7px; right: -5px; background: var(--gold); color: #1B1606; font-size: 9px; font-weight: 800; letter-spacing: .08em; padding: 2px 5px; border-radius: 4px; }
+.badge.first { background: var(--ink); color: var(--bg); left: -5px; right: auto; }
+.grade { position: absolute; top: 4px; right: 4px; font-family: var(--display); font-size: 12px; background: var(--ink); color: var(--bg); border-radius: 4px; padding: 1px 5px; }
+.grade.g10 { background: var(--gold); color: #1B1606; }
+.flip { animation: flip .45s both; }
+@keyframes flip { from { transform: rotateY(90deg) scale(.9); opacity: .2 } to { transform: none; opacity: 1 } }
+.empty-slot { border: 2px dashed var(--line); border-radius: 7px; aspect-ratio: 5 / 6.6; display: grid; place-items: center; color: var(--muted); font-family: var(--display); font-size: 18px; background: var(--sunk); }
+button.card, button.empty-slot { font: inherit; color: inherit; }
+
+/* Upgrades */
+.ups { display: grid; gap: 8px; }
+.up { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 10px 12px; text-align: left; }
+.up:hover:not(:disabled) { border-color: var(--accent); }
+.up:disabled { cursor: not-allowed; }
+.up:disabled .cost { color: var(--muted); }
+.up b { font-weight: 700; }
+.up .lv { color: var(--muted); font-weight: 600; font-size: 12px; margin-left: 6px; }
+.up .d { grid-column: 1; font-size: 12.5px; color: var(--muted); }
+.up .cost { grid-row: 1 / span 2; grid-column: 2; font-weight: 800; color: var(--accent); }
+.up.maxed { opacity: .6; }
+
+.btn { border: 0; background: var(--accent); color: var(--accent-ink); font-weight: 700; padding: 9px 14px; border-radius: 8px; }
+.btn:disabled { background: var(--sunk); color: var(--muted); cursor: not-allowed; }
+.btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+.btn.big { padding: 13px 18px; font-size: 15px; }
+
+/* Binder */
+.binder { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+.pagehead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pagehead .done { color: var(--good); font-weight: 800; font-size: 12px; }
+.trades { display: grid; gap: 8px; }
+.trade { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 14px; margin: 0; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-weight: 700; text-align: right; }
+
+/* Grader */
+.slots { display: grid; gap: 8px; }
+.slot { border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; font-size: 14px; }
+.slot.busy { border-style: solid; }
+.dupes { display: grid; gap: 6px; max-height: 360px; overflow-y: auto; }
+.dupe { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.dupe .r { font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.gradedgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+
+/* Locked */
+.locked-panel { text-align: center; padding: 40px 16px; display: grid; gap: 10px; justify-items: center; }
+.locked-panel .glyph { font-family: var(--display); font-size: 40px; color: var(--line); }
+
+/* Footer / stats */
+.foot { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 760px) { .foot { grid-template-columns: minmax(0, 1fr); } }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 6px 12px; font-weight: 700; font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* Toasts + card detail */
+.toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; z-index: 20; width: min(420px, calc(100% - 32px)); pointer-events: none; }
+.toast { background: var(--ink); color: var(--bg); border-radius: 10px; padding: 10px 14px; font-weight: 600; font-size: 14px; animation: up .3s both; }
+.toast.eerie { background: var(--gold); color: #1B1606; }
+@keyframes up { from { transform: translateY(10px); opacity: 0 } }
+.scrim { position: fixed; inset: 0; background: color-mix(in srgb, var(--sunk) 75%, transparent); display: grid; place-items: center; z-index: 15; padding: 16px; }
+.detail { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; width: min(340px, 100%); display: grid; gap: 12px; }
+.detail .card { width: 170px; justify-self: center; }
+.detail .card .nm { font-size: 15px; }
+.detail .card .rr { font-size: 11px; }
+.detail .flav { font-style: italic; margin: 0; }
+.detail .flav.aware { color: var(--gold); font-weight: 600; }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+
+@media (prefers-reduced-motion: reduce) { .flip, .toast { animation: none } .meter > span, .switch::after { transition: none } }
+</style>
+
+<div class="wrap">
+  <header class="bar">
+    <div class="bar-top">
+      <h1 class="logo">Mint Condition<small>Base Set · 40 cards</small></h1>
+      <div class="wallet">
+        <div class="coins num"><i>¢</i><span id="coins">0</span></div>
+        <div class="rate num"><span id="rate">0</span> coins / sec</div>
+      </div>
+    </div>
+    <div class="goal" id="goal"></div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Layers"></nav>
+  </header>
+
+  <main id="main"></main>
+
+  <footer class="foot">
+    <section class="panel">
+      <h3>Your stats</h3>
+      <dl class="kv num" id="stats"></dl>
+    </section>
+    <section class="panel">
+      <h3>Playtest tools</h3>
+      <p class="hint">Speed up time to check the pacing. Progress saves in this browser and keeps earning for up to 4 hours while you're away.</p>
+      <div class="row">
+        <div class="seg" id="speed" role="group" aria-label="Game speed">
+          <button type="button" data-speed="1" aria-pressed="true">1×</button>
+          <button type="button" data-speed="10">10×</button>
+          <button type="button" data-speed="60">60×</button>
+        </div>
+        <span id="resetBox"><button type="button" class="btn ghost" data-act="reset">Start over</button></span>
+      </div>
+    </section>
+  </footer>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div id="modal"></div>
+
+<script>
+/*ENGINE*/
+</script>
+<script>
+(function () {
+  var CARDS = MC.CARDS, RAR = MC.RAR, UPS = MC.UPS, BY_R = MC.BY_R;
+  var SAVE_KEY = 'mint-condition-v1';
+  var LAYERS = [
+    { id: 'kid', n: 1, name: 'The Kid' },
+    { id: 'binder', n: 2, name: 'The Binder' },
+    { id: 'grader', n: 3, name: 'The Grader' },
+    { id: 'l4', n: 4, name: '???' },
+    { id: 'l5', n: 5, name: '???' },
+    { id: 'l6', n: 6, name: '???' }
+  ];
+  var g, tab = 'kid', speed = 1, lastAnimKey = 0, structKey = {}, freshTabs = {};
+
+  // ---------- helpers ----------
+  var SUF = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc'];
+  function fmt(n) {
+    if (!isFinite(n)) return '∞';
+    if (n < 1000) return n < 10 ? (Math.floor(n * 10) / 10).toString() : Math.floor(n).toString();
+    var e = Math.floor(Math.log10(n) / 3);
+    if (e >= SUF.length) return n.toExponential(2).replace('+', '');
+    var v = n / Math.pow(1000, e);
+    return (v < 10 ? v.toFixed(2) : v < 100 ? v.toFixed(1) : Math.floor(v)) + SUF[e];
+  }
+  function dur(sec) {
+    if (!isFinite(sec) || sec > 8.64e6) return 'a long while';
+    sec = Math.max(0, Math.round(sec));
+    var h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+    return h ? h + 'h ' + m + 'm' : m ? m + 'm ' + s + 's' : s + 's';
+  }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function aware() { return g.s.binder; }
+
+  // ---------- procedural creature art ----------
+  var artCache = {};
+  function art(i) {
+    var watcherOpen = g && g.s.grader;
+    var key = i + (watcherOpen ? 'o' : '');
+    if (artCache[key]) return artCache[key];
+    var c = CARDS[i], h = (i * 47 + 12) % 360, x = (i * 2654435761) >>> 0;
+    function bit(n) { return (x >>> n) & 1; } function pick(n, m) { return ((x >>> n) & 7) % m; }
+    var body = 'hsl(' + h + ' 55% 58%)', dark = 'hsl(' + h + ' 45% 30%)', bg = 'hsl(' + ((h + 180) % 360) + ' 45% 86%)';
+    if (c.r === 'F') bg = 'hsl(45 80% 80%)';
+    var bw = 18 + pick(3, 3) * 3, bh = 12 + pick(6, 3) * 2, cy = 29;
+    var s = '<svg viewBox="0 0 60 48" aria-hidden="true"><rect width="60" height="48" fill="' + bg + '"/>';
+    s += '<ellipse cx="30" cy="44" rx="' + (bw - 2) + '" ry="3" fill="' + dark + '" opacity=".25"/>';
+    if (c.id === 'watcher') {
+      s += '<circle cx="30" cy="25" r="16" fill="hsl(265 40% 30%)"/>';
+      s += watcherOpen ? '<ellipse cx="30" cy="25" rx="11" ry="8" fill="#F5F2E8"/><circle cx="30" cy="25" r="5" fill="hsl(45 90% 50%)"/><circle cx="30" cy="25" r="2.4" fill="#111"/>'
+                       : '<path d="M19 25 Q30 32 41 25" stroke="#F5F2E8" stroke-width="2" fill="none"/>';
+      s += '</svg>'; return (artCache[key] = s);
+    }
+    var ear = pick(9, 4);
+    if (ear === 1) s += '<path d="M' + (30 - bw * .6) + ' ' + (cy - bh + 3) + 'l-4 -10 l9 6z M' + (30 + bw * .6) + ' ' + (cy - bh + 3) + 'l4 -10 l-9 6z" fill="' + dark + '"/>';
+    if (ear === 2) s += '<path d="M30 ' + (cy - bh + 1) + ' q-2 -9 4 -12" stroke="' + dark + '" stroke-width="2" fill="none"/><circle cx="34" cy="' + (cy - bh - 11) + '" r="2.2" fill="hsl(' + ((h + 60) % 360) + ' 80% 60%)"/>';
+    if (ear === 3) s += '<ellipse cx="' + (30 - bw * .55) + '" cy="' + (cy - bh + 2) + '" rx="4" ry="6" fill="' + body + '"/><ellipse cx="' + (30 + bw * .55) + '" cy="' + (cy - bh + 2) + '" rx="4" ry="6" fill="' + body + '"/>';
+    if (c.r === 'R' || c.r === 'F') s += '<path d="M30 ' + (cy - bh - 1) + ' l-3 -8 l3 3 l3 -3z" fill="hsl(45 90% 55%)"/>';
+    s += '<ellipse cx="30" cy="' + cy + '" rx="' + bw + '" ry="' + bh + '" fill="' + body + '"/>';
+    s += '<ellipse cx="30" cy="' + (cy + bh * .35) + '" rx="' + (bw * .55) + '" ry="' + (bh * .45) + '" fill="#fff" opacity=".22"/>';
+    if (bit(12)) s += '<circle cx="' + (30 - bw * .7) + '" cy="' + (cy + 2) + '" r="2.5" fill="hsl(350 80% 70%)" opacity=".6"/><circle cx="' + (30 + bw * .7) + '" cy="' + (cy + 2) + '" r="2.5" fill="hsl(350 80% 70%)" opacity=".6"/>';
+    var eyes = pick(14, 3) === 0 ? 1 : 2, ey = cy - bh * .25;
+    var ex = eyes === 1 ? [30] : [30 - bw * .35, 30 + bw * .35];
+    ex.forEach(function (e) { s += '<circle cx="' + e + '" cy="' + ey + '" r="' + (eyes === 1 ? 4.5 : 3.2) + '" fill="#fff"/><circle cx="' + (e + .6) + '" cy="' + (ey + .4) + '" r="' + (eyes === 1 ? 2.4 : 1.7) + '" fill="#141826"/>'; });
+    s += bit(17) ? '<path d="M27 ' + (cy + 3) + ' q3 3 6 0" stroke="#141826" stroke-width="1.3" fill="none"/>' : '<circle cx="30" cy="' + (cy + 4) + '" r="1.4" fill="#141826"/>';
+    s += '</svg>';
+    return (artCache[key] = s);
+  }
+
+  function cardHTML(i, o) {
+    o = o || {};
+    var c = CARDS[i], tag = o.btn ? 'button type="button" data-act="detail" data-i="' + i + '"' : 'div';
+    var h = '<' + tag + ' class="card ' + c.r + (o.anim ? ' flip' : '') + '"' + (o.anim ? ' style="animation-delay:' + o.anim + 'ms"' : '') + '>';
+    h += '<span class="art">' + art(i) + '</span><span class="nm">' + esc(c.name) + '</span>';
+    h += '<span class="rr"><span>' + RAR[c.r].name + '</span>' + (o.count > 1 ? '<em>×' + o.count + '</em>' : '') + '</span>';
+    if (o.isNew) h += '<span class="badge">NEW</span>';
+    if (o.first) h += '<span class="badge first">1ST</span>';
+    if (o.grade) h += '<span class="grade' + (o.grade === 10 ? ' g10' : '') + '">' + o.grade + '</span>';
+    return h + '</' + (o.btn ? 'button' : 'div') + '>';
+  }
+
+  // ---------- toasts ----------
+  function toast(msg, eerie) {
+    var t = document.createElement('div'); t.className = 'toast' + (eerie ? ' eerie' : ''); t.textContent = msg;
+    $('toasts').appendChild(t); setTimeout(function () { t.remove(); }, eerie ? 6000 : 3500);
+  }
+
+  // ---------- goal bar ----------
+  function nextGoal() {
+    var s = g.s;
+    if (!s.binder) return { name: 'Unlock The Binder', cost: MC.BINDER_COST, act: 'binder' };
+    if (!s.grader) return { name: 'Unlock The Grader', cost: MC.GRADER_COST, act: 'grader' };
+    return null;
+  }
+  function renderGoal() {
+    var gl = nextGoal(), el = $('goal');
+    if (!gl) { el.innerHTML = '<b>Layer 4 is still sealed.</b><span class="eta">More to come</span>'; return; }
+    var p = Math.min(1, g.s.coins / gl.cost), need = gl.cost - g.s.coins, r = g.rate();
+    var autoNote = g.s.autoOn && p < 1 ? ' · Pack Habit is spending your coins' : '';
+    el.innerHTML = '<b>Next: ' + gl.name + ' · ¢' + fmt(gl.cost) + '</b><span class="eta num">' + (p >= 1 ? 'Ready' : need / r > 36000 ? 'Keep collecting' : '~' + dur(need / r)) + autoNote + '</span><div class="meter"><span style="width:' + (p * 100).toFixed(1) + '%"></span></div>';
+  }
+
+  // ---------- tabs ----------
+  function unlocked(id) { return id === 'kid' || (id === 'binder' && g.s.binder) || (id === 'grader' && g.s.grader); }
+  function renderTabs() {
+    $('tabs').innerHTML = LAYERS.map(function (L) {
+      var open = unlocked(L.id), visible = open || L.id === 'binder' || (L.id === 'grader' && g.s.binder);
+      var label = visible ? L.name : '???';
+      return '<button type="button" role="tab" class="tab' + (open ? '' : ' locked') + (freshTabs[L.id] ? ' fresh' : '') + '" aria-selected="' + (tab === L.id) + '" data-tab="' + L.id + '"><span class="n">' + L.n + '</span>' + label + '</button>';
+    }).join('');
+  }
+
+  // ---------- upgrade list ----------
+  function upsHTML(layer) {
+    var keys = Object.keys(UPS).filter(function (k) { var u = UPS[k]; return u.layer === layer && !u.hidden && (!u.req || g.s.up[u.req]); });
+    return '<div class="ups">' + keys.map(function (k) {
+      var u = UPS[k], lv = g.s.up[k], maxed = lv >= u.max;
+      return '<button type="button" class="up' + (maxed ? ' maxed' : '') + '" data-act="up" data-k="' + k + '"' + (maxed ? ' disabled' : '') + '>' +
+        '<span><b>' + u.name + '</b><span class="lv">Lv ' + lv + (u.max < 999 ? ' / ' + u.max : '') + '</span></span>' +
+        '<span class="d">' + u.desc + '</span><span class="cost num">' + (maxed ? 'Maxed' : '¢' + fmt(g.upCost(k))) + '</span></button>';
+    }).join('') + '</div>';
+  }
+
+  // ---------- layer panels ----------
+  function kidHTML() {
+    var s = g.s;
+    var pulls = s.last.length ? s.last.map(function (p, n) { return cardHTML(p.i, { isNew: p.isNew, first: p.i === s.first && s.packs === 1, anim: p.anim ? n * 70 : 0, btn: true }); }).join('')
+      : '<p class="hint">Your first pack is on the house. Tap it.</p>';
+    return '<div class="layer">' +
+      '<section class="panel"><h2>Packs</h2>' +
+        '<div class="packrow"><button type="button" class="pack" id="packBtn" data-act="rip"><span>BASE<br>SET</span><small id="packCost"></small></button>' +
+        '<div class="packinfo"><div class="price">Each pack has <b>' + g.packSize() + ' cards</b>. Opening one yourself gives better odds on the last card.</div>' +
+        '<div class="toggle"><button type="button" class="switch" role="switch" id="autoSw" aria-checked="' + s.autoOn + '" aria-label="Pack Habit" data-act="auto"></button><span>Pack Habit <span class="hint" id="autoTxt"></span></span></div>' +
+        '<div class="mini-meter"><span id="autoBar"></span></div></div></div>' +
+        '<h3>Last pack</h3><div class="pulls">' + pulls + '</div></section>' +
+      '<section class="panel"><h2>Upgrades</h2>' + upsHTML('kid') + '</section></div>';
+  }
+
+  function lockedHTML(title, body, act, cost) {
+    return '<section class="panel locked-panel"><div class="glyph">?</div><h2>' + title + '</h2><p class="hint">' + body + '</p>' +
+      (act ? '<button type="button" class="btn big" data-act="' + act + '" id="unlockBtn">Unlock for ¢' + fmt(cost) + '</button>' : '') + '</section>';
+  }
+
+  function binderHTML() {
+    var s = g.s;
+    if (!s.binder) return lockedHTML('The Binder', 'A real collector keeps their cards in order. A binder makes every different card you own boost all your income, and finished pages multiply everything. Duplicates finally have a use too.', 'binder', MC.BINDER_COST);
+    var pd = g.pagesDone(), u = g.uniques();
+    var pages = ['F', 'R', 'U', 'C'].map(function (r) {
+      var have = BY_R[r].filter(function (i) { return g.owns(i); }).length;
+      return '<div class="pagehead"><h3>' + RAR[r].name + ' page · ' + have + '/' + BY_R[r].length + '</h3>' + (pd[r] ? '<span class="done">COMPLETE ×1.5</span>' : '') + '</div>' +
+        '<div class="binder">' + BY_R[r].map(function (i) {
+          if (!g.owns(i)) return '<div class="empty-slot" aria-label="Missing card">?</div>';
+          var best = s.graded.filter(function (x) { return x.i === i; }).reduce(function (m, x) { return Math.max(m, x.g); }, 0);
+          return cardHTML(i, { count: s.col[i] || 0, first: i === s.first, grade: best || 0, btn: true });
+        }).join('') + '</div>';
+    }).join('');
+    var trades = ['C', 'U', 'R'].map(function (r) {
+      var nr = RAR[r].next;
+      return '<div class="trade"><span>' + g.tradeCost() + ' spare ' + RAR[r].name + 's → 1 ' + RAR[nr].name + ' <span class="hint num">(you have <span data-dupes="' + r + '">0</span>)</span></span>' +
+        '<button type="button" class="btn" data-act="trade" data-r="' + r + '">Trade</button></div>';
+    }).join('');
+    return '<div class="layer">' +
+      '<section class="panel"><h2>Your binder</h2><p class="hint">Missing cards are what you trade toward. Tap a card to read it.</p>' + pages + '</section>' +
+      '<div style="display:grid;gap:16px;min-width:0">' +
+        '<section class="panel"><h2>Collection bonus</h2><dl class="kv num">' +
+          '<dt>Different cards</dt><dd>' + u + ' / ' + CARDS.length + '</dd>' +
+          '<dt>Bonus per card</dt><dd>+' + Math.round((0.04 + 0.02 * s.up.pages) * 100) + '%</dd>' +
+          '<dt>Finished pages</dt><dd>' + Object.keys(pd).filter(function (r) { return pd[r]; }).length + ' / 4</dd>' +
+          '<dt>Total multiplier</dt><dd>×' + fmt(g.globalMult()) + '</dd></dl></section>' +
+        '<section class="panel"><h2>Trade-ups</h2><p class="hint">Spares are copies beyond your first. Trades always give a card you\'re missing if there is one.</p><div class="trades">' + trades + '</div></section>' +
+        '<section class="panel"><h2>Binder upgrades</h2>' + upsHTML('binder') + '</section>' +
+      '</div></div>';
+  }
+
+  function graderHTML() {
+    var s = g.s;
+    if (!s.binder) return lockedHTML('???', 'Unlock The Binder first.', null);
+    if (!s.grader) return lockedHTML('The Grader', 'Mail your spare cards off to be graded from 1 to 10. A 10 earns 32 times a raw copy. A bad grade earns less than raw. Every grade is a gamble.', 'grader', MC.GRADER_COST);
+    var slots = '';
+    for (var k = 0; k < g.gradeSlots(); k++) {
+      var q = s.queue[k];
+      slots += q ? '<div class="slot busy"><div class="row" style="justify-content:space-between"><b>' + esc(CARDS[q.i].name) + '</b><span class="hint num" data-left="' + k + '"></span></div><div class="mini-meter"><span data-qbar="' + k + '"></span></div></div>'
+                 : '<div class="slot"><span class="hint">Empty mailbox. Send a spare card below.</span></div>';
+    }
+    var spares = CARDS.filter(function (c) { return s.col[c.i] > 1; }).sort(function (a, b) { return RAR[b.r].inc - RAR[a.r].inc; });
+    var dl = spares.length ? spares.map(function (c) {
+      return '<div class="dupe"><span><b>' + esc(c.name) + '</b> <span class="r" style="color:var(--r' + c.r + ')">' + RAR[c.r].name + '</span> <span class="hint num">×' + (s.col[c.i] - 1) + ' spare</span></span>' +
+        '<button type="button" class="btn" data-act="grade" data-i="' + c.i + '" data-fee="' + c.i + '">Send · ¢' + fmt(g.gradeFee(c.i)) + '</button></div>';
+    }).join('') : '<p class="hint">No spares right now. Keep opening packs.</p>';
+    var graded = s.graded.slice().sort(function (a, b) { return b.g - a.g; });
+    var gg = graded.length ? '<div class="gradedgrid">' + graded.slice(0, 60).map(function (x) { return cardHTML(x.i, { grade: x.g, btn: true }); }).join('') + '</div>' : '<p class="hint">Nothing graded yet.</p>';
+    return '<div class="layer">' +
+      '<section class="panel"><h2>Mailboxes</h2><p class="hint">Grades: 10 earns ×32, 7 earns ×4, 5 earns the same as raw, and 3 or below earns less. Fees rise with every card you grade.</p><div class="slots">' + slots + '</div>' +
+        '<h3>Your spares</h3><div class="dupes">' + dl + '</div></section>' +
+      '<div style="display:grid;gap:16px;min-width:0">' +
+        '<section class="panel"><h2>Graded slabs</h2><p class="hint num">' + graded.length + ' graded' + (graded.length > 60 ? ', showing the best 60' : '') + '.</p>' + gg + '</section>' +
+        '<section class="panel"><h2>Grader upgrades</h2>' + upsHTML('grader') + '</section>' +
+      '</div></div>';
+  }
+
+  function sealedHTML(n) {
+    var lines = { l4: 'Your cards are getting restless in their sleeves. They want to be played.', l5: 'Someone has to sell the packs. Why not you?', l6: 'Someone has to make the cards.' };
+    return '<section class="panel locked-panel"><div class="glyph">' + n + '</div><h2>Sealed</h2><p class="hint">' + (g.s.grader ? lines['l' + n] : 'Keep collecting.') + '</p><p class="hint">Not in this prototype yet.</p></section>';
+  }
+
+  // Rebuild structure only when something structural changed
+  function structureKey() {
+    var s = g.s;
+    if (tab === 'kid') return 'k' + s.packs + JSON.stringify(s.up) + s.autoOn + s.binder;
+    if (tab === 'binder') return 'b' + s.binder + JSON.stringify(s.col) + s.graded.length + JSON.stringify(s.up);
+    if (tab === 'grader') return 'g' + s.grader + s.binder + JSON.stringify(s.col) + s.graded.length + s.queue.length + JSON.stringify(s.up);
+    return tab;
+  }
+  function renderMain(force) {
+    var key = structureKey();
+    if (!force && key === structKey.main) return;
+    structKey.main = key;
+    var L = LAYERS.find(function (l) { return l.id === tab; });
+    $('main').innerHTML = tab === 'kid' ? kidHTML() : tab === 'binder' ? binderHTML() : tab === 'grader' ? graderHTML() : sealedHTML(L.n);
+    g.s.last.forEach(function (p) { p.anim = false; });
+  }
+
+  // Cheap per-frame updates: numbers, disabled states, meters
+  function update() {
+    var s = g.s;
+    $('coins').textContent = fmt(s.coins);
+    $('rate').textContent = fmt(g.rate());
+    renderGoal();
+    var pb = $('packBtn');
+    if (pb) { var pc = g.packCost(); $('packCost').textContent = '¢' + fmt(pc); pb.disabled = s.coins < pc;
+      var iv = g.autoInterval(); $('autoTxt').textContent = s.autoOn ? '· one every ' + iv.toFixed(1) + 's' : '· paused, saving up';
+      $('autoBar').style.width = (s.autoOn ? Math.min(100, s.autoT / iv * 100) : 0) + '%'; }
+    document.querySelectorAll('[data-act="up"]').forEach(function (b) {
+      var k = b.dataset.k; if (s.up[k] >= UPS[k].max) return; b.disabled = s.coins < g.upCost(k);
+    });
+    var ub = $('unlockBtn'); if (ub) ub.disabled = s.coins < (ub.dataset.act === 'binder' ? MC.BINDER_COST : MC.GRADER_COST);
+    document.querySelectorAll('[data-dupes]').forEach(function (el) { var r = el.dataset.dupes; el.textContent = g.dupes(r); });
+    document.querySelectorAll('[data-act="trade"]').forEach(function (b) { b.disabled = g.dupes(b.dataset.r) < g.tradeCost(); });
+    document.querySelectorAll('[data-act="grade"]').forEach(function (b) { b.disabled = s.coins < g.gradeFee(+b.dataset.i) || s.queue.length >= g.gradeSlots(); });
+    s.queue.forEach(function (q, k) {
+      var t = document.querySelector('[data-left="' + k + '"]'); if (t) t.textContent = dur(q.left / 1) + ' left';
+      var b = document.querySelector('[data-qbar="' + k + '"]'); if (b) b.style.width = ((1 - q.left / q.total) * 100) + '%';
+    });
+    var pd = s.binder ? g.pagesDone() : {};
+    $('stats').innerHTML = '<dt>Time played</dt><dd>' + dur(s.t) + '</dd><dt>Packs opened</dt><dd>' + s.packs + '</dd>' +
+      '<dt>Different cards</dt><dd>' + g.uniques() + ' / ' + CARDS.length + '</dd>' +
+      '<dt>Allowance</dt><dd>¢' + fmt(g.allowance()) + '/s</dd><dt>Card income</dt><dd>¢' + fmt(g.cardIncome()) + '/s</dd>' +
+      '<dt>Multiplier</dt><dd>×' + fmt(g.globalMult()) + '</dd><dt>Coins earned, all time</dt><dd>¢' + fmt(s.life) + '</dd>' +
+      (s.binderAt != null ? '<dt>Binder unlocked at</dt><dd>' + dur(s.binderAt) + '</dd>' : '') +
+      (s.graderAt != null ? '<dt>Grader unlocked at</dt><dd>' + dur(s.graderAt) + '</dd>' : '');
+  }
+
+  // ---------- card detail ----------
+  function showDetail(i) {
+    var c = CARDS[i], s = g.s, own = s.col[i] || 0;
+    var grades = s.graded.filter(function (x) { return x.i === i; }).map(function (x) { return x.g; }).sort(function (a, b) { return b - a; });
+    var flav = (aware() && c.aware) ? '<p class="flav">' + esc(c.f) + '</p><p class="flav aware">' + esc(c.aware) + '</p>' : '<p class="flav">' + esc(c.f) + '</p>';
+    if (i === s.first) flav += '<p class="hint">This was the very first card you pulled. It earns 5× what it normally would.</p>';
+    $('modal').innerHTML = '<div class="scrim" data-act="close"><div class="detail" role="dialog" aria-modal="true" aria-label="' + esc(c.name) + '">' +
+      cardHTML(i, { grade: grades[0] || 0 }) + flav +
+      '<dl class="kv num"><dt>Raw copies</dt><dd>' + own + '</dd><dt>Earns per raw copy</dt><dd>¢' + fmt(RAR[c.r].inc) + '/s base</dd>' +
+      (grades.length ? '<dt>Graded copies</dt><dd>' + grades.join(', ') + '</dd>' : '') + '</dl>' +
+      '<button type="button" class="btn ghost" data-act="close" id="closeBtn">Close</button></div></div>';
+    var cb = $('closeBtn'); if (cb) cb.focus();
+  }
+
+  // ---------- actions ----------
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-act],[data-tab],[data-speed]'); if (!t) return;
+    var s = g.s;
+    if (t.dataset.tab) {
+      var id = t.dataset.tab;
+      if (id === 'kid' || id === 'binder' || (id === 'grader' && s.binder) || id[0] === 'l') { tab = id; freshTabs[id] = false; renderTabs(); renderMain(true); update(); }
+      return;
+    }
+    if (t.dataset.speed) { speed = +t.dataset.speed; document.querySelectorAll('[data-speed]').forEach(function (b) { b.setAttribute('aria-pressed', b === t); }); return; }
+    var a = t.dataset.act;
+    if (a === 'close') { if (e.target === t) $('modal').innerHTML = ''; return; }
+    if (a === 'rip') { var got = g.openPack(true); if (got) { got.forEach(function (p) { p.anim = true; }); afterPull(got); } }
+    else if (a === 'auto') { s.autoOn = !s.autoOn; s.autoT = 0; }
+    else if (a === 'up') { g.buyUp(t.dataset.k); }
+    else if (a === 'binder') { if (g.unlockBinder()) { freshTabs.binder = true; tab = 'binder'; toast('The Binder is open. Every different card now boosts everything.'); setTimeout(function () { toast('Something in your binder moved.', true); }, 4000); } }
+    else if (a === 'grader') { if (g.unlockGrader()) { freshTabs.grader = true; tab = 'grader'; toast('The Grader is open. Send your spares off to be graded.'); setTimeout(function () { toast('The Watcher has opened its eye.', true); }, 5000); artCache = {}; } }
+    else if (a === 'trade') { var i = g.tradeUp(t.dataset.r); if (i != null) toast('Traded for ' + CARDS[i].name + '.'); }
+    else if (a === 'grade') { g.sendGrade(+t.dataset.i); }
+    else if (a === 'detail') { showDetail(+t.dataset.i); return; }
+    else if (a === 'reset') { $('resetBox').innerHTML = '<span class="confirm">Erase everything? <button type="button" class="btn" data-act="reset-yes">Yes, start over</button><button type="button" class="btn ghost" data-act="reset-no">Keep playing</button></span>'; return; }
+    else if (a === 'reset-no') { $('resetBox').innerHTML = '<button type="button" class="btn ghost" data-act="reset">Start over</button>'; return; }
+    else if (a === 'reset-yes') { try { localStorage.removeItem(SAVE_KEY); } catch (er) {} g = new MC.E(); tab = 'kid'; artCache = {}; $('resetBox').innerHTML = '<button type="button" class="btn ghost" data-act="reset">Start over</button>'; }
+    renderTabs(); renderMain(true); update();
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('modal').innerHTML = ''; });
+
+  function afterPull(got) {
+    got.forEach(function (p) {
+      var c = CARDS[p.i];
+      if (p.isNew && c.r === 'F') toast('FOIL! ' + c.name + ' joins your collection.');
+      if (p.isNew && c.id === 'watcher' && aware()) toast('It was already watching before you pulled it.', true);
+    });
+  }
+
+  // ---------- save / load ----------
+  function save() { try { g.s.saved = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(g.s)); } catch (e) {} }
+  function load(snap) {
+    var st = snap || null;
+    if (!st) { try { var raw = localStorage.getItem(SAVE_KEY); if (raw) st = JSON.parse(raw); } catch (e) {} }
+    if (st) { var f = MC.fresh(); for (var k in f) if (!(k in st)) st[k] = f[k]; for (var u in f.up) if (!(u in st.up)) st.up[u] = 0; }
+    g = new MC.E(st);
+    if (st && !snap) {
+      var away = Math.min(MC.OFFLINE_CAP, (Date.now() - (st.saved || Date.now())) / 1000);
+      if (away > 30) {
+        var c0 = g.s.life, p0 = g.s.packs;
+        for (var t = 0; t < away; t += 1) g.tick(Math.min(1, away - t));
+        g.s.last.forEach(function (p) { p.anim = false; });
+        toast('While you were away (' + dur(away) + '): +¢' + fmt(g.s.life - c0) + ', ' + (g.s.packs - p0) + ' packs opened.');
+      }
+    }
+  }
+
+  // ---------- loop ----------
+  var lastT = performance.now(), saveT = 0, prevPacks = 0;
+  function loop() {
+    var now = performance.now(), dt = Math.min(1, (now - lastT) / 1000) * speed; lastT = now;
+    var steps = Math.ceil(dt), ev = [];
+    for (var k = 0; k < steps; k++) ev = ev.concat(g.tick(dt / steps));
+    ev.forEach(function (x) { toast(CARDS[x.i].name + ' came back graded ' + x.g + (x.g === 10 ? '. Gem mint!' : x.g <= 3 ? '. Ouch.' : '.')); });
+    if (g.s.packs !== prevPacks && tab === 'kid') { if (!g.s.last.some(function (p) { return p.anim; })) g.s.last.forEach(function (p) { p.anim = true; }); }
+    prevPacks = g.s.packs;
+    renderMain(false); update();
+    saveT += dt; if (saveT > 5) { saveT = 0; save(); }
+  }
+
+  function start(data) {
+    load(data && data.s ? data.s : null);
+    prevPacks = g.s.packs;
+    renderTabs(); renderMain(true); update();
+    setInterval(loop, 250);
+    window.addEventListener('pagehide', save);
+    document.addEventListener('visibilitychange', function () { if (document.hidden) save(); });
+  }
+  if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(function () { return { s: g.s }; });
+  if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(start); else start((window.claude && window.claude.hot && window.claude.hot.data) || {});
+})();
+</script>
