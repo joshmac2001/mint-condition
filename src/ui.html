@@ -51,6 +51,8 @@ button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--accent
 .tab[aria-selected="true"] .n { color: var(--bg); opacity: .7; }
 .tab.locked { color: var(--muted); border-style: dashed; background: transparent; }
 .tab.fresh { box-shadow: 0 0 0 3px var(--gold); }
+.coltab { margin-right: 8px; }
+.colsum { max-width: 360px; }
 
 /* Panels */
 .layer { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
@@ -118,7 +120,7 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
 .btn.big { padding: 13px 18px; font-size: 15px; }
 
 /* Binder */
-.binder { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+.binder { display: grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 8px; }
 .pagehead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .pagehead .done { color: var(--good); font-weight: 800; font-size: 12px; }
 .trades { display: grid; gap: 8px; }
@@ -313,7 +315,7 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
   // ---------- tabs ----------
   function unlocked(id) { return id === 'kid' || (id === 'binder' && g.s.binder) || (id === 'grader' && g.s.grader); }
   function renderTabs() {
-    $('tabs').innerHTML = LAYERS.map(function (L) {
+    $('tabs').innerHTML = '<button type="button" role="tab" class="tab coltab" aria-selected="' + (tab === 'col') + '" data-tab="col">Collection <span class="n num">' + g.uniques() + '/' + CARDS.length + '</span></button>' + LAYERS.map(function (L) {
       var open = unlocked(L.id), visible = open || L.id === 'binder' || (L.id === 'grader' && g.s.binder);
       var label = visible ? L.name : '???';
       return '<button type="button" role="tab" class="tab' + (open ? '' : ' locked') + (freshTabs[L.id] ? ' fresh' : '') + '" aria-selected="' + (tab === L.id) + '" data-tab="' + L.id + '"><span class="n">' + L.n + '</span>' + label + '</button>';
@@ -360,15 +362,7 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
     var s = g.s;
     if (!s.binder) return lockedHTML('The Binder', 'A real collector keeps their cards in order. A binder makes every different card you own boost all your income, and finished pages multiply everything. Duplicates finally have a use too.', 'binder', MC.BINDER_COST);
     var pd = g.pagesDone(), u = g.uniques();
-    var pages = ['F', 'R', 'U', 'C'].map(function (r) {
-      var have = BY_R[r].filter(function (i) { return g.owns(i); }).length;
-      return '<div class="pagehead"><h3>' + RAR[r].name + ' page · ' + have + '/' + BY_R[r].length + '</h3>' + (pd[r] ? '<span class="done">COMPLETE ×1.5</span>' : '') + '</div>' +
-        '<div class="binder">' + BY_R[r].map(function (i) {
-          if (!g.owns(i)) return '<div class="empty-slot" aria-label="Missing card">?</div>';
-          var best = s.graded.filter(function (x) { return x.i === i; }).reduce(function (m, x) { return Math.max(m, x.g); }, 0);
-          return cardHTML(i, { count: s.col[i] || 0, first: i === s.first, grade: best || 0, btn: true });
-        }).join('') + '</div>';
-    }).join('');
+    var pages = pagesHTML(true);
     var trades = ['C', 'U', 'R'].map(function (r) {
       var nr = RAR[r].next;
       return '<div class="trade"><span>' + g.tradeCost() + ' spare ' + RAR[r].name + 's → 1 ' + RAR[nr].name + ' <span class="hint num">(you have <span data-dupes="' + r + '">0</span>)</span></span>' +
@@ -413,6 +407,33 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
       '</div></div>';
   }
 
+
+  // Shared card grid, grouped by rarity. Used by the Collection tab and the Binder.
+  function pagesHTML(binderMode) {
+    var s = g.s, pd = g.pagesDone();
+    return ['F', 'R', 'U', 'C'].map(function (r) {
+      var have = BY_R[r].filter(function (i) { return g.owns(i); }).length;
+      return '<div class="pagehead"><h3>' + RAR[r].name + (binderMode ? ' page' : 's') + ' · ' + have + '/' + BY_R[r].length + '</h3>' +
+        (binderMode && pd[r] ? '<span class="done">COMPLETE ×1.5</span>' : (!binderMode && have === BY_R[r].length ? '<span class="done">ALL FOUND</span>' : '')) + '</div>' +
+        '<div class="binder">' + BY_R[r].map(function (i) {
+          if (!g.owns(i)) return '<div class="empty-slot" aria-label="Not pulled yet">?</div>';
+          var best = s.graded.filter(function (x) { return x.i === i; }).reduce(function (m, x) { return Math.max(m, x.g); }, 0);
+          return cardHTML(i, { count: s.col[i] || 0, first: i === s.first, grade: best || 0, btn: true });
+        }).join('') + '</div>';
+    }).join('');
+  }
+
+  function colHTML() {
+    var s = g.s, total = 0, spares = 0;
+    for (var k in s.col) { total += s.col[k]; if (s.col[k] > 1) spares += s.col[k] - 1; }
+    return '<section class="panel"><h2>Your collection</h2>' +
+      '<dl class="kv num colsum"><dt>Different cards</dt><dd>' + g.uniques() + ' / ' + CARDS.length + '</dd>' +
+      '<dt>Cards owned</dt><dd>' + total + '</dd><dt>Spares (extra copies)</dt><dd>' + spares + '</dd>' +
+      (s.graded.length ? '<dt>Graded slabs</dt><dd>' + s.graded.length + '</dd>' : '') + '</dl>' +
+      '<p class="hint">Tap any card to read it. A ? is a card you haven\'t pulled yet.' + (s.binder ? '' : ' Spares will be useful later.') + '</p>' +
+      pagesHTML(false) + '</section>';
+  }
+
   function sealedHTML(n) {
     var lines = { l4: 'Your cards are getting restless in their sleeves. They want to be played.', l5: 'Someone has to sell the packs. Why not you?', l6: 'Someone has to make the cards.' };
     return '<section class="panel locked-panel"><div class="glyph">' + n + '</div><h2>Sealed</h2><p class="hint">' + (g.s.grader ? lines['l' + n] : 'Keep collecting.') + '</p><p class="hint">Not in this prototype yet.</p></section>';
@@ -424,6 +445,7 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
     if (tab === 'kid') return 'k' + s.packs + JSON.stringify(s.up) + s.autoOn + s.binder + s.tipDone;
     if (tab === 'binder') return 'b' + s.binder + JSON.stringify(s.col) + s.graded.length + JSON.stringify(s.up);
     if (tab === 'grader') return 'g' + s.grader + s.binder + JSON.stringify(s.col) + s.graded.length + s.queue.length + JSON.stringify(s.up);
+    if (tab === 'col') return 'c' + JSON.stringify(s.col) + s.graded.length + s.binder;
     return tab;
   }
   function renderMain(force) {
@@ -431,7 +453,7 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
     if (!force && key === structKey.main) return;
     structKey.main = key;
     var L = LAYERS.find(function (l) { return l.id === tab; });
-    $('main').innerHTML = tab === 'kid' ? kidHTML() : tab === 'binder' ? binderHTML() : tab === 'grader' ? graderHTML() : sealedHTML(L.n);
+    $('main').innerHTML = tab === 'col' ? colHTML() : tab === 'kid' ? kidHTML() : tab === 'binder' ? binderHTML() : tab === 'grader' ? graderHTML() : sealedHTML(L.n);
     g.s.last.forEach(function (p) { p.anim = false; });
   }
 
@@ -498,7 +520,7 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
     var s = g.s;
     if (t.dataset.tab) {
       var id = t.dataset.tab;
-      if (id === 'kid' || id === 'binder' || (id === 'grader' && s.binder) || id[0] === 'l') { tab = id; freshTabs[id] = false; renderTabs(); renderMain(true); update(); }
+      if (id === 'col' || id === 'kid' || id === 'binder' || (id === 'grader' && s.binder) || id[0] === 'l') { tab = id; freshTabs[id] = false; renderTabs(); renderMain(true); update(); }
       return;
     }
     if (t.dataset.speed) { speed = +t.dataset.speed; document.querySelectorAll('[data-speed]').forEach(function (b) { b.setAttribute('aria-pressed', b === t); }); return; }
@@ -547,7 +569,7 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
   }
 
   // ---------- loop ----------
-  var lastT = performance.now(), saveT = 0, prevPacks = 0;
+  var lastT = performance.now(), saveT = 0, prevPacks = 0, prevUniq = -1;
   function loop() {
     var now = performance.now(), dt = Math.min(1, (now - lastT) / 1000) * speed; lastT = now;
     var steps = Math.ceil(dt), ev = [];
@@ -555,6 +577,7 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
     ev.forEach(function (x) { toast(CARDS[x.i].name + ' came back graded ' + x.g + (x.g === 10 ? '. Gem mint!' : x.g <= 3 ? '. Ouch.' : '.')); });
     if (g.s.packs !== prevPacks && tab === 'kid') { if (!g.s.last.some(function (p) { return p.anim; })) g.s.last.forEach(function (p) { p.anim = true; }); }
     prevPacks = g.s.packs;
+    var u = g.uniques(); if (u !== prevUniq) { prevUniq = u; renderTabs(); }
     renderMain(false); update();
     saveT += dt; if (saveT > 5) { saveT = 0; save(); }
   }
