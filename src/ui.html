@@ -89,7 +89,7 @@ button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--accent
 .card .art { border-radius: 4px; aspect-ratio: 5 / 4; max-width: 100%; display: block; overflow: hidden; }
 .card .art svg { width: 100%; height: 100%; display: block; }
 .card .nm { font-weight: 700; font-size: 11.5px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card .rr { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--rc); display: flex; justify-content: space-between; gap: 4px; }
+.card .rr { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--rc); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 4px; }
 .card .rr em { font-style: normal; color: var(--muted); }
 .badge { position: absolute; top: -7px; right: -5px; background: var(--gold); color: #1B1606; font-size: 9px; font-weight: 800; letter-spacing: .08em; padding: 2px 5px; border-radius: 4px; }
 .badge.first { background: var(--ink); color: var(--bg); left: -5px; right: auto; }
@@ -125,6 +125,10 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
 .trade { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
 .kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 14px; margin: 0; }
 .kv dt { color: var(--muted); } .kv dd { margin: 0; font-weight: 700; text-align: right; }
+.kv .tot { border-top: 1px solid var(--line); padding-top: 6px; color: var(--ink); font-weight: 800; }
+.tip { border-color: var(--accent); }
+.tip p { margin: 0; max-width: 60ch; }
+.tip .btn { justify-self: start; }
 
 /* Grader */
 .slots { display: grid; gap: 8px; }
@@ -278,7 +282,7 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
     var c = CARDS[i], tag = o.btn ? 'button type="button" data-act="detail" data-i="' + i + '"' : 'div';
     var h = '<' + tag + ' class="card ' + c.r + (o.anim ? ' flip' : '') + '"' + (o.anim ? ' style="animation-delay:' + o.anim + 'ms"' : '') + '>';
     h += '<span class="art">' + art(i) + '</span><span class="nm">' + esc(c.name) + '</span>';
-    h += '<span class="rr"><span>' + RAR[c.r].name + '</span>' + (o.count > 1 ? '<em>×' + o.count + '</em>' : '') + '</span>';
+    h += '<span class="rr"><span>' + RAR[c.r].name + '</span>' + (o.count > 1 ? '<em>×' + o.count + '</em>' : o.earn ? '<em>+' + fmt(RAR[c.r].inc) + '/s</em>' : '') + '</span>';
     if (o.isNew) h += '<span class="badge">NEW</span>';
     if (o.first) h += '<span class="badge first">1ST</span>';
     if (o.grade) h += '<span class="grade' + (o.grade === 10 ? ' g10' : '') + '">' + o.grade + '</span>';
@@ -330,16 +334,21 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
   // ---------- layer panels ----------
   function kidHTML() {
     var s = g.s;
-    var pulls = s.last.length ? s.last.map(function (p, n) { return cardHTML(p.i, { isNew: p.isNew, first: p.i === s.first && s.packs === 1, anim: p.anim ? n * 70 : 0, btn: true }); }).join('')
+    var pulls = s.last.length ? s.last.map(function (p, n) { return cardHTML(p.i, { isNew: p.isNew, first: p.i === s.first && s.packs === 1, anim: p.anim ? n * 70 : 0, btn: true, earn: true }); }).join('')
       : '<p class="hint">Your first pack is on the house. Tap it.</p>';
     return '<div class="layer">' +
+      '<div style="display:grid;gap:16px;min-width:0">' + (s.tipDone ? '' :
+        '<section class="panel tip"><h2>How to play</h2><p>Every card you own earns coins, every second, forever. Rarer cards earn more.</p>' +
+        '<p>Spend coins on <b>packs</b> to get more cards, and on <b>upgrades</b> to boost what they earn. Then save up to unlock the next layer.</p>' +
+        '<button type="button" class="btn ghost" data-act="tip">Got it</button></section>') +
       '<section class="panel"><h2>Packs</h2>' +
         '<div class="packrow"><button type="button" class="pack" id="packBtn" data-act="rip"><span>BASE<br>SET</span><small id="packCost"></small></button>' +
         '<div class="packinfo"><div class="price">Each pack has <b>' + g.packSize() + ' cards</b>. Opening one yourself gives better odds on the last card.</div>' +
         '<div class="toggle"><button type="button" class="switch" role="switch" id="autoSw" aria-checked="' + s.autoOn + '" aria-label="Pack Habit" data-act="auto"></button><span>Pack Habit <span class="hint" id="autoTxt"></span></span></div>' +
         '<div class="mini-meter"><span id="autoBar"></span></div></div></div>' +
-        '<h3>Last pack</h3><div class="pulls">' + pulls + '</div></section>' +
-      '<section class="panel"><h2>Upgrades</h2>' + upsHTML('kid') + '</section></div>';
+        '<h3>Last pack</h3><div class="pulls">' + pulls + '</div></section></div>' +
+      '<div style="display:grid;gap:16px;min-width:0"><section class="panel"><h2>Where your coins come from</h2><dl class="kv num earn" id="earn"></dl></section>' +
+      '<section class="panel"><h2>Upgrades</h2>' + upsHTML('kid') + '</section></div></div>';
   }
 
   function lockedHTML(title, body, act, cost) {
@@ -412,7 +421,7 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
   // Rebuild structure only when something structural changed
   function structureKey() {
     var s = g.s;
-    if (tab === 'kid') return 'k' + s.packs + JSON.stringify(s.up) + s.autoOn + s.binder;
+    if (tab === 'kid') return 'k' + s.packs + JSON.stringify(s.up) + s.autoOn + s.binder + s.tipDone;
     if (tab === 'binder') return 'b' + s.binder + JSON.stringify(s.col) + s.graded.length + JSON.stringify(s.up);
     if (tab === 'grader') return 'g' + s.grader + s.binder + JSON.stringify(s.col) + s.graded.length + s.queue.length + JSON.stringify(s.up);
     return tab;
@@ -448,6 +457,19 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
       var b = document.querySelector('[data-qbar="' + k + '"]'); if (b) b.style.width = ((1 - q.left / q.total) * 100) + '%';
     });
     var pd = s.binder ? g.pagesDone() : {};
+    var ep = $('earn');
+    if (ep) {
+      var cnt = { C: 0, U: 0, R: 0, F: 0 };
+      for (var k in s.col) cnt[CARDS[k].r] += s.col[k];
+      var h = '<dt>Allowance</dt><dd>¢' + fmt(g.allowance()) + '/s</dd>';
+      ['C', 'U', 'R', 'F'].forEach(function (r) { if (cnt[r]) h += '<dt>' + cnt[r] + ' ' + RAR[r].name + (cnt[r] > 1 ? 's' : '') + ' × ¢' + fmt(RAR[r].inc) + '</dt><dd>¢' + fmt(cnt[r] * RAR[r].inc) + '/s</dd>'; });
+      if (s.first != null && g.owns(s.first)) h += '<dt>First-pull bonus (' + esc(CARDS[s.first].name) + ')</dt><dd>¢' + fmt(RAR[CARDS[s.first].r].inc * 4) + '/s</dd>';
+      if (s.graded.length) h += '<dt>' + s.graded.length + ' graded slabs</dt><dd>¢' + fmt(s.graded.reduce(function (a, x) { return a + RAR[CARDS[x.i].r].inc * g.gradeMult(x.g); }, 0)) + '/s</dd>';
+      if (s.up.sleeves) h += '<dt>Card Sleeves</dt><dd>cards +' + (25 * s.up.sleeves) + '%</dd>';
+      if (s.binder) h += '<dt>Binder bonus</dt><dd>everything ×' + fmt(g.globalMult()) + '</dd>';
+      h += '<dt class="tot">Total</dt><dd class="tot">¢' + fmt(g.rate()) + '/s</dd>';
+      ep.innerHTML = h;
+    }
     $('stats').innerHTML = '<dt>Time played</dt><dd>' + dur(s.t) + '</dd><dt>Packs opened</dt><dd>' + s.packs + '</dd>' +
       '<dt>Different cards</dt><dd>' + g.uniques() + ' / ' + CARDS.length + '</dd>' +
       '<dt>Allowance</dt><dd>¢' + fmt(g.allowance()) + '/s</dd><dt>Card income</dt><dd>¢' + fmt(g.cardIncome()) + '/s</dd>' +
@@ -483,6 +505,7 @@ button.card, button.empty-slot { font: inherit; color: inherit; }
     var a = t.dataset.act;
     if (a === 'close') { if (e.target === t) $('modal').innerHTML = ''; return; }
     if (a === 'rip') { var got = g.openPack(true); if (got) { got.forEach(function (p) { p.anim = true; }); afterPull(got); } }
+    else if (a === 'tip') { s.tipDone = true; }
     else if (a === 'auto') { s.autoOn = !s.autoOn; s.autoT = 0; }
     else if (a === 'up') { g.buyUp(t.dataset.k); }
     else if (a === 'binder') { if (g.unlockBinder()) { freshTabs.binder = true; tab = 'binder'; toast('The Binder is open. Every different card now boosts everything.'); setTimeout(function () { toast('Something in your binder moved.', true); }, 4000); } }

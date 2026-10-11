@@ -80,7 +80,7 @@ var MC = (function () {
     return {
       v: 1, coins: 20, life: 0, t: 0, packs: 0, col: {}, up: up, autoT: 0,
       autoOn: true, binder: false, grader: false, binderAt: null, graderAt: null,
-      first: null, graded: [], queue: [], seen: 0, last: [], saved: Date.now()
+      first: null, tipDone: false, graded: [], queue: [], seen: 0, last: [], saved: Date.now()
     };
   }
 
